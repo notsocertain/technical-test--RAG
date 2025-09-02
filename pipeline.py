@@ -1,28 +1,19 @@
 import warnings
 
 warnings.filterwarnings("ignore")
-
-
 import os, os.path as op, glob
 import re
 import json
 from typing import List, Tuple, Dict, Any
-
-
 from langchain.schema import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_core.embeddings import Embeddings
 from langchain_community.vectorstores import Chroma
-
 from langchain_google_genai import ChatGoogleGenerativeAI
-
 from flashrank import Ranker, RerankRequest
-from groq import Groq
-
 import re
 import nltk
-from typing import List, Dict, Set, Tuple
 
 from params import (
     EMBED_MODEL,
@@ -41,15 +32,10 @@ from params import (
 )
 
 from utils.prompt import USER_PROMPT_TEMPLATE, SYSTEM_PROMPT
-from utils.questions import questions
 
 
-try:
-    nltk.data.find("tokenizers/punkt")
-    nltk.data.find("corpora/stopwords")
-except LookupError:
-    nltk.download("punkt")
-    nltk.download("stopwords")
+nltk.download("punkt")
+nltk.download("stopwords")
 print("NLTK data downloaded")
 
 from nltk.corpus import stopwords
@@ -228,14 +214,11 @@ class Reranker:
         if not docs:
             return []
 
-        # print(f"[pipeline] Starting 3-stage reranking with {len(docs)} documents")
-
         keyword_scored_docs = self._filter_by_keywords(
             query, docs, keyword_filter_threshold
         )
 
         if not keyword_scored_docs:
-            # print("[pipeline] No documents passed keyword filter, using all documents")
             keyword_scored_docs = [
                 (doc, {"combined_keyword_score": 0.0}) for doc in docs
             ]
@@ -243,7 +226,6 @@ class Reranker:
         candidates = keyword_scored_docs
         candidate_docs = [doc for doc, _ in candidates]
 
-        # print(f"[pipeline] Stage 1 complete: {len(candidates)} candidates for FlashRank")
         try:
             passages = [{"text": d.page_content} for d in candidate_docs]
             flashrank_results = self.ranker.rerank(
@@ -313,18 +295,14 @@ def retrieve_sec_info_enhanced(
     vectorstore: Chroma, query: str, k: int = 5, prefetch: int = PREFETCH
 ) -> List[Dict]:
     """Enhanced retrieval with stopword removal and keyword matching"""
-    print(f"[retrieve] Enhanced query: {query}")
 
     candidates = vectorstore.similarity_search(query, k=prefetch)  # Get more candidates
-    print(f"[retrieve] Retrieved {len(candidates)} initial candidates")
 
     enhanced_reranker = Reranker("ms-marco-MiniLM-L-12-v2")
 
     top_docs = enhanced_reranker.rerank(
         query, candidates, top_k=k, keyword_filter_threshold=0.05, hybrid_weight=0.4
     )
-
-    print(f"[retrieve] Final reranked results: {len(top_docs)}")
 
     results = []
     for doc in top_docs:
@@ -514,7 +492,6 @@ class Generationclass:
             query=query,
             context=context,
         )
-        # print(user_prompt)
 
         completion = self.client.chat.completions.create(
             model=GENERATIVE_MODEL,
