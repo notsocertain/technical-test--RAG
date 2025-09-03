@@ -32,11 +32,6 @@ Why: To get a much more accurate semantic relevance score than the initial vecto
 
 How: Uses FlashRank, a cross-encoder that evaluates the query and document together, providing superior contextual understanding.
 
-Stage 3: Hybrid Scoring
-
-Why: To get the best of both worlds.
-
-How: The final rank is a weighted combination of the keyword score (for precision) and the cross-encoder score (for semantic nuance).
 
 ### Generation & Prompt Engineering
 Preventing Hallucinations: A strong system prompt strictly commands the LLM to answer only from the provided document chunks.
