@@ -20,22 +20,13 @@ Phase 2: Online Querying:
 
 1. Fetch a large set of candidate documents via initial vector search.
 
-2. Apply an Advanced 3-Stage Reranking process to refine results.
+2. Apply an Advanced Reranking process to refine results.
 
 3. Pass the top-ranked chunks as context to a Gemini LLM.
 
 4. Generate a final answer with verifiable source citations.
 
-### 3-Stage Hybrid Reranking
-This multi-step process ensures both semantic relevance and keyword precision.
-
-Stage 1: Keyword Filtering & Scoring
-
-Why: To catch documents with exact term matches (like "$1.5 million" or "liabilities") that pure semantic search might miss.
-
-How: Scores documents using a custom financial vocabulary, protected keywords, and pattern matching (e.g., $, %, years).
-
-Stage 2: Cross-Encoder Reranking
+###  Cross-Encoder Reranking
 
 Why: To get a much more accurate semantic relevance score than the initial vector search.
 
