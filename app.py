@@ -8,7 +8,7 @@ def answer_question(query: str) -> dict:
     Answers a question using the complete RAG pipeline.
     """
     vecstore = Chromaclass()
-    results = vecstore.retrieve(query, k=TOP_K, prefetch=30 * 2)
+    results = vecstore.retrieve_documents(query, k=TOP_K, prefetch=30 * 2)
     generator = Generationclass()
     output = generator.generate(query, results)
     return {

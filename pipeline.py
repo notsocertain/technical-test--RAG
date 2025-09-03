@@ -148,7 +148,7 @@ class Generationclass:
         )
 
     @staticmethod
-    def _coerce_and_parse_json(raw: str) -> Dict[str, Any]:
+    def _sanitize_and_parse_json(raw: str) -> Dict[str, Any]:
         if not raw:
             return {}
         s = raw.strip()
@@ -170,7 +170,7 @@ class Generationclass:
         ref_ids = re.findall(r'"([^"]+)"', m_ids.group(1)) if m_ids else []
         return {"answer": ans, "ref_ids": ref_ids} if (ans or ref_ids) else {}
 
-    def _format_context(self, results: List[Dict]) -> str:
+    def _build_context_string(self, results: List[Dict]) -> str:
         blocks = []
         for r in results:
             cid = r.get("chunk_id", "")
@@ -184,7 +184,7 @@ class Generationclass:
             blocks.append(f"{header}\n{txt}")
         return "\n\n".join(blocks)
 
-    def _chunk_ids_to_sources_flat(
+    def _map_chunk_ids_to_sources(
         self, ref_ids: List[str], results: List[Dict]
     ) -> List[str]:
         index = {r["chunk_id"]: r for r in results if r.get("chunk_id")}
@@ -200,52 +200,12 @@ class Generationclass:
             break
         return out
 
-    def generate(self, query: str, results: List[Dict]) -> Dict[str, Any]:
-        if not results:
-            return {"answer": NOT_FOUND_MSG, "sources": []}
-
-        context = self._format_context(results)
-        valid_ids = [r.get("chunk_id", "") for r in results if r.get("chunk_id")]
-
-        user_prompt = USER_PROMPT_TEMPLATE.format(
-            not_found_msg=NOT_FOUND_MSG,
-            valid_ids=", ".join(valid_ids),
-            query=query,
-            context=context,
-        )
-
-        completion = self.client.chat.completions.create(
-            model=GENERATIVE_MODEL,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt},
-            ],
-            temperature=0.0,
-            max_tokens=576,
-        )
-
-        raw = (completion.choices[0].message.content or "").strip()
-        obj = self._coerce_and_parse_json(raw)
-        answer = (obj.get("answer") or "").strip()
-        ref_ids = [
-            rid
-            for rid in (obj.get("ref_ids") or [])
-            if rid in set([r.get("chunk_id", "") for r in results])
-        ]
-
-        if not answer or answer == NOT_FOUND_MSG:
-            return {"answer": NOT_FOUND_MSG, "sources": []}
-
-        return {
-            "answer": answer,
-            "sources": self._chunk_ids_to_sources_flat(ref_ids, results),
-        }
 
     def generate(self, query: str, results: List[Dict]) -> Dict[str, Any]:
         if not results:
             return {"answer": NOT_FOUND_MSG, "sources": []}
 
-        context = self._format_context(results)
+        context = self._build_context_string(results)
         valid_ids = [r.get("chunk_id", "") for r in results if r.get("chunk_id")]
 
         user_prompt = USER_PROMPT_TEMPLATE.format(
@@ -272,7 +232,7 @@ class Generationclass:
             print(f"An error occurred during LLM generation: {e}")
             return {"answer": "An error occurred during generation.", "sources": []}
 
-        obj = self._coerce_and_parse_json(raw)
+        obj = self._sanitize_and_parse_json(raw)
         answer = (obj.get("answer") or "").strip()
         ref_ids = [
             rid
@@ -285,7 +245,7 @@ class Generationclass:
 
         return {
             "answer": answer,
-            "sources": self._chunk_ids_to_sources_flat(ref_ids, results),
+            "sources": self._map_chunk_ids_to_sources(ref_ids, results),
         }
 
 
@@ -361,7 +321,7 @@ class Chromaclass:
         return unique
 
     @staticmethod
-    def _assign_chunk_ids(split_docs: List[Document]) -> None:
+    def _generate_chunk_ids(split_docs: List[Document]) -> None:
         counters: Dict[Tuple[str, int], int] = {}
         for d in split_docs:
             md = d.metadata or {}
@@ -372,7 +332,7 @@ class Chromaclass:
             d.metadata["chunk_id"] = f"{fname}|p{page}|c{seq}"
             counters[key] = seq + 1
 
-    def _collection_exists(self) -> bool:
+    def _check_collection_existence(self) -> bool:
         try:
             temp_emb = Embeddingclass(load_model=False)
             vs = Chroma(
@@ -385,7 +345,7 @@ class Chromaclass:
         except Exception:
             return False
 
-    def _load_pdfs(self, paths: List[str]) -> List[Document]:
+    def _load_pdf_documents(self, paths: List[str]) -> List[Document]:
         all_docs: List[Document] = []
         for p in paths:
             loader = PyPDFLoader(p)
@@ -426,14 +386,14 @@ class Chromaclass:
         if not pdfs:
             raise FileNotFoundError(f"No PDF files found in {self.pdf_dir}")
         emb = Embeddingclass()
-        docs = self._load_pdfs(pdfs)
+        docs = self._load_pdf_documents(pdfs)
         splitter = RecursiveCharacterTextSplitter(
             chunk_size=CHUNK_SIZE,
             chunk_overlap=CHUNK_OVERLAP,
             separators=["\n\n", "\n", " ", ""],
         )
         split_docs = splitter.split_documents(docs)
-        Chromaclass._assign_chunk_ids(split_docs)
+        Chromaclass._generate_chunk_ids(split_docs)
         vs = Chroma.from_documents(
             documents=split_docs,
             embedding=emb,
@@ -444,7 +404,7 @@ class Chromaclass:
         Chromaclass._vectorstore = vs
 
     def _ensure_vectorstore(self):
-        if self._collection_exists():
+        if self._check_collection_existence():
             Chromaclass._vectorstore = Chroma(
                 collection_name=self.collection_name,
                 embedding_function=Embeddingclass(load_model=False),
@@ -456,7 +416,7 @@ class Chromaclass:
     def vectorstore(self) -> Chroma:
         return Chromaclass._vectorstore
 
-    def retrieve(
+    def retrieve_documents(
         self, query: str, k: int = 10, prefetch: int = 30
     ) -> List[Dict[str, Any]]:
         candidates = self.vectorstore().similarity_search(query, k=prefetch)

@@ -6,7 +6,7 @@ import json
 # Fix system path by appending the parent directory of tests
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
 
-from pipeline import generationclass
+from pipeline import Generationclass
 
 
 def run_tests():
@@ -15,7 +15,7 @@ def run_tests():
     # 1. Instantiate the class
     print("Instantiating generationclass...")
     try:
-        gen_client = generationclass()
+        gen_client = Generationclass()
         print("Success: generationclass instantiated.")
     except ValueError as e:
         print(f"Error: {e}. Please set your GEMINI_API_KEY environment variable.")

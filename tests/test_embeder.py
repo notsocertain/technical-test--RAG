@@ -4,10 +4,10 @@ import sys
 # Fix system path by appending the parent directory of tests
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
 
-from pipeline import embeddingclass
+from pipeline import Embeddingclass
 
 # testing out embeddingclass
-gemini_embedder = embeddingclass()
+gemini_embedder = Embeddingclass()
 query_text = "What is the capital of France?"
 print(f"Embedding query: '{query_text}'")
 query_embedding = gemini_embedder.embed_query(query_text)
