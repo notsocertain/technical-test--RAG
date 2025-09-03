@@ -92,7 +92,7 @@ class Embeddingclass(Embeddings):
             return []
 
 
-class rerankerclass:
+class Rerankerclass:
     def __init__(self, model_name: str = FLASHRANK_MODEL):
         self.ranker = Ranker(model_name=model_name)
 
@@ -460,7 +460,7 @@ class Chromaclass:
         self, query: str, k: int = 10, prefetch: int = 30
     ) -> List[Dict[str, Any]]:
         candidates = self.vectorstore().similarity_search(query, k=prefetch)
-        rr = rerankerclass()
+        rr = Rerankerclass()
         top_docs = rr.rerank(query, candidates, top_k=k) if candidates else []
         results = []
         for doc in top_docs:
@@ -477,4 +477,3 @@ class Chromaclass:
                 }
             )
         return results
-
