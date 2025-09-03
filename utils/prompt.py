@@ -2,9 +2,14 @@ SYSTEM_PROMPT = "Return strict, valid JSON only. No explanations. Only respond i
 
 
 USER_PROMPT_TEMPLATE = """
-You are an SEC filing analyst. Use ONLY the passages below.
+You are an expert in analysing SEC filings. Provide valid answer from the passages below.
 
-IMPORTANT: Do NOT use table of contents, index pages, or navigation sections to answer questions. Only use actual content sections with substantive information.
+IMPORTANT: 
+
+- Ignore table of contents, indexes, navigation, or boilerplate text. Only use substantive content.
+- Do not make assumptions. Only state what is explicitly in the passages.
+- Filing date = signing date of the document (even if not explicitly stated).
+- Always include denominations ($, %, etc.) and units (million, billion, etc.) when providing figures.
 
 TASK:
 1) Answer the question in ≤ 25 words.
@@ -21,7 +26,6 @@ INSTRUCTIONS:
 4) Review the dates given by users correctly then only answer.
 5) When providing figures, always include denominations (like $) and units (like million or billion).
 6) Only state facts provided in passages. If can't be answered respond accordigly.
-7) Follow all the above mentioned instructions.
 
 VALID CHUNK_IDs: {valid_ids}
 
